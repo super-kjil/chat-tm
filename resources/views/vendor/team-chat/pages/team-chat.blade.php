@@ -1,0 +1,127 @@
+<x-filament-panels::page>
+    <style>
+        .fi-page-header { display: none !important; }
+
+        /* Mobile: sidebar slides in as overlay */
+        @media (max-width: 767px) {
+            .tc-sidebar-mobile {
+                position: absolute;
+                top: 0;
+                left: 0;
+                bottom: 0;
+                z-index: 40;
+                width: 80vw;
+                max-width: 280px;
+                transform: translateX(-100%);
+                transition: transform 0.25s ease;
+            }
+            .tc-sidebar-mobile.open {
+                transform: translateX(0);
+            }
+            .tc-chat-container {
+                position: relative;
+            }
+        }
+    </style>
+
+    <div
+        x-data="{
+            height: 0,
+            sidebarOpen: false,
+            openSidebar()  { this.sidebarOpen = true },
+            closeSidebar() { this.sidebarOpen = false }
+        }"
+        x-init="
+            const update = () => {
+                height = window.innerHeight - $el.getBoundingClientRect().top - 16;
+            };
+            update();
+            window.addEventListener('resize', update);
+        "
+        @open-sidebar.window="openSidebar()"
+        @close-sidebar.window="closeSidebar()"
+        @select-channel.window="closeSidebar()"
+        @select-conversation.window="closeSidebar()"
+        :style="'height: ' + height + 'px'"
+        class="tc-chat-container flex overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-900"
+    >
+        {{-- Mobile backdrop --}}
+        <div
+            x-show="sidebarOpen"
+            x-transition:enter="transition-opacity duration-200"
+            x-transition:enter-start="opacity-0"
+            x-transition:enter-end="opacity-100"
+            x-transition:leave="transition-opacity duration-200"
+            x-transition:leave-start="opacity-100"
+            x-transition:leave-end="opacity-0"
+            @click="closeSidebar()"
+            class="md:hidden absolute inset-0 z-30 bg-black/40"
+            style="display: none;"
+        ></div>
+
+        {{-- Chat Sidebar --}}
+        {{-- On desktop: normal flex item. On mobile: absolute overlay panel --}}
+        <div
+            :class="sidebarOpen ? 'open' : ''"
+            class="tc-sidebar-mobile md:relative md:transform-none md:w-64 md:flex md:flex-col"
+        >
+            <livewire:team-chat::sidebar :active-type="$activeType" :active-id="$activeId" :wire:key="'sidebar'" />
+        </div>
+
+        {{-- Main content area --}}
+        <div class="flex flex-1 flex-col min-w-0">
+            @if($activeId)
+                {{-- Channel/Conversation Header --}}
+                <div class="shrink-0">
+                    <livewire:team-chat::channel-header :initial-type="$activeType" :initial-id="$activeId" :wire:key="'header-'.$activeId" />
+                </div>
+
+                {{-- Message Feed --}}
+                <div class="flex-1 min-h-0 overflow-hidden">
+                    <livewire:team-chat::message-feed
+                        :initial-type="$activeType"
+                        :initial-id="$activeId"
+                        :wire:key="'feed-'.$activeId"
+                    />
+                </div>
+
+                {{-- Message Composer --}}
+                <div class="shrink-0">
+                    <livewire:team-chat::message-composer :initial-type="$activeType" :initial-id="$activeId" :wire:key="'composer-'.$activeId" />
+                </div>
+            @else
+                <div class="flex flex-1 items-center justify-center text-gray-400 dark:text-gray-500">
+                    <div class="text-center px-4">
+                        <x-heroicon-o-chat-bubble-left-right class="mx-auto h-12 w-12 mb-4" />
+                        <p class="text-lg font-medium">{{ __('team-chat::messages.select_channel_or_dm') }}</p>
+                        <p class="text-sm mt-1">{{ __('team-chat::messages.select_channel_hint') }}</p>
+                        {{-- Mobile: prompt to open sidebar --}}
+                        <button
+                            @click="openSidebar()"
+                            class="md:hidden mt-4 inline-flex items-center gap-2 rounded-lg bg-primary-600 px-4 py-2 text-sm font-medium text-white hover:bg-primary-700 transition-colors"
+                        >
+                            <x-heroicon-o-bars-3 class="h-4 w-4" />
+                            {{ __('team-chat::messages.channels') }}
+                        </button>
+                    </div>
+                </div>
+            @endif
+        </div>
+
+        {{-- Thread Panel --}}
+        @if($showThreadPanel && $threadParentId)
+            <div class="w-full md:w-96 border-l border-gray-200 dark:border-gray-700 flex flex-col bg-white dark:bg-gray-900">
+                <livewire:team-chat::thread-panel :parent-message-id="$threadParentId" :wire:key="'thread-'.$threadParentId" />
+            </div>
+        @endif
+    </div>
+
+    {{-- Search Modal --}}
+    <livewire:team-chat::search-modal :wire:key="'search'" />
+
+    {{-- Member List Modal --}}
+    <livewire:team-chat::member-list :wire:key="'members'" />
+
+    {{-- User Profile Card Modal --}}
+    <livewire:team-chat::user-profile-card :wire:key="'profile'" />
+</x-filament-panels::page>
